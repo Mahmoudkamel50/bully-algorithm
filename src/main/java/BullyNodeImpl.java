@@ -1,27 +1,28 @@
-import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 class BullyNodeImpl extends UnicastRemoteObject implements BullyNode {
     private static final long serialVersionUID = 1L;
+    private static final int ELECTION_MESSAGE = 1;
+    private static final int COORDINATOR_MESSAGE = 2;
+
+    private List<Integer> higherProcesses = new ArrayList<>();
+    private List<Integer> lowerProcesses = new ArrayList<>();
     private int id;
     private int coordinatorId;
     private Map<Integer, BullyNode> nodes;
     private boolean isCoordinator;
-    static BullyNode stub1;
 
-    public void BullyNode(int id, Map<Integer, BullyNode> nodes) throws RemoteException {
+    public void BullyNode(int id, Map<Integer, BullyNode> nodes) {
         this.id = id;
         this.nodes = nodes;
         this.isCoordinator = false;
     }
 
-    protected BullyNodeImpl() throws RemoteException {
+    protected BullyNodeImpl(int processId) throws RemoteException {
     }
 
     public int getId() throws RemoteException {
@@ -42,18 +43,13 @@ class BullyNodeImpl extends UnicastRemoteObject implements BullyNode {
         }, 3000);
     }
 
-    public void sendMessage(String message) throws RemoteException {
-        System.out.printf("[%d] Sent message: %s%n", this.id, message);
-        for (BullyNode node : this.nodes.values()) {
-            if (node.getId() != this.id) {
-                node.receiveMessage(this.id, message);
-            }
-        }
+    public void sendMessage(int senderId, int messageType) throws RemoteException {
+        LocalDateTime currentTime = LocalDateTime.now();
+        String message = getMessageTypeString(messageType);
+        System.out.println(getCurrentTime() + " Process " + id + " sends " + message + " message to Process " + senderId);
+        receiveMessage(senderId, messageType);
     }
 
-    public void receiveMessage(int senderId, String message) throws RemoteException {
-        System.out.printf("[%d] Received message: %s from %d%n", this.id, message, senderId);
-    }
 
     public void startElection() throws RemoteException {
         System.out.printf("[%d] Starting election%n", this.id);
@@ -74,12 +70,37 @@ class BullyNodeImpl extends UnicastRemoteObject implements BullyNode {
         System.out.printf("[%d] Declaring self as coordinator%n", this.id);
         this.isCoordinator = true;
         this.coordinatorId = this.id;
-        this.sendMessage(String.format("Coordinator elected: %d", this.id));
+        this.sendMessage(id,COORDINATOR_MESSAGE);
         for (int nodeId : this.nodes.keySet()) {
             if (nodeId != this.id) {
                 this.nodes.get(nodeId).setCoordinator(this.id);
             }
         }
+    }
+
+    public static String getCurrentTime() {
+        LocalDateTime currentTime = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+        return formatter.format(currentTime);
+    }
+
+    @Override
+    public void receiveMessage(int senderId, int messageType) {
+        LocalDateTime currentTime = LocalDateTime.now();
+        String message = getMessageTypeString(messageType);
+        System.out.println(getCurrentTime() + " Process " + id + " receives " + message + " message from Process " + senderId);
+        if (messageType == ELECTION_MESSAGE) {
+            try {
+                sendMessage(senderId, COORDINATOR_MESSAGE);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+            higherProcesses.add(senderId);
+        } else if (messageType == COORDINATOR_MESSAGE) {
+            higherProcesses.remove(senderId);
+            lowerProcesses.add(senderId);
+        }
+
     }
 
     public void setCoordinator(int coordinatorId) throws RemoteException {
@@ -88,17 +109,27 @@ class BullyNodeImpl extends UnicastRemoteObject implements BullyNode {
         this.isCoordinator = false;
     }
 
-    public static void main(String[] args) throws RemoteException {
-            BullyNodeImpl node = new BullyNodeImpl();
-            try {
-                stub1 = (BullyNode) UnicastRemoteObject.exportObject(node, 0);
-                Registry registry= LocateRegistry.getRegistry();
-                registry.bind("stub1", stub1);
+    public String getMessageTypeString(int messageType) {
+        switch (messageType) {
+            case ELECTION_MESSAGE:
+                return "ELECTION";
+            case COORDINATOR_MESSAGE:
+                return "COORDINATOR";
+            default:
+                return "";
+        }
+    }
 
-                System.err.println("Node stub1 is ready");
-                stub1.startElection();
-            } catch (AlreadyBoundException e) {
-                e.printStackTrace();
-            }
+    public static void main(String[] args) throws RemoteException {
+        int processId;
+        if (args.length > 0) {
+            processId = Integer.parseInt(args[0]);
+        } else {
+            processId = new Random().nextInt(100) + 1;
+        }
+        System.out.println(getCurrentTime() + " Process " + processId + " started");
+
+        BullyNodeImpl bullyNode = new BullyNodeImpl(processId);
+        bullyNode.start();
     }
 }
