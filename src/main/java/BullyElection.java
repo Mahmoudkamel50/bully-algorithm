@@ -1,4 +1,4 @@
-// try to solve the task by different ways
+// try to solve the task by different way
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -16,7 +16,7 @@ public class BullyElection {
         if (args.length > 0) {
             instanceId = Integer.parseInt(args[0]);
         } else {
-            instanceId = new Random().nextInt(50) + 1;
+            instanceId = new Random().nextInt(100) + 1;
         }
 
         processes.add(instanceId);

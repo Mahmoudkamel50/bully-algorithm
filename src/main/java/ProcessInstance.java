@@ -3,15 +3,12 @@ import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
-class ProcessInstance extends UnicastRemoteObject implements MessageListener {
-    private int id;
+class ProcessInstance extends UnicastRemoteObject implements MessageListener, MessageSender {
+    private final int id;
     private int coordinatorId;
-    private List<Integer> runningInstances;
+    private final List<Integer> runningInstances;
     private boolean isCoordinator;
 
     public ProcessInstance(int id) throws RemoteException {
@@ -102,7 +99,9 @@ class ProcessInstance extends UnicastRemoteObject implements MessageListener {
     }
 
     public static void main(String[] args) throws RemoteException, MalformedURLException, NotBoundException {
-        int numProcesses = Integer.parseInt(args[0]);
+        Scanner in = new Scanner(System.in);
+        System.out.println("Enter the number of process");
+        int numProcesses = in.nextInt();
         for (int i = 0; i < numProcesses; i++) {
             ProcessInstance instance = new ProcessInstance();
             Naming.rebind("ProcessInstance_" + instance.id, instance);
