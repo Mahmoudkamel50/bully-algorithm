@@ -9,8 +9,8 @@ import java.util.concurrent.TimeUnit;
 public class BullyElection {
     private static int instanceId;
     private static boolean isCoordinator = false;
-    private static boolean isRunning = true;
-    private static List<Integer> processes = new ArrayList<>();
+    private static final boolean isRunning = true;
+    private static final List<Integer> processes = new ArrayList<>();
 
     public static void main(String[] args) {
         if (args.length > 0) {
