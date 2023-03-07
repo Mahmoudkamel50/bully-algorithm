@@ -1,4 +1,4 @@
-# bully-algorithm-with-rmi
+### bully-algorithm-with-rmi
 
 ## This task is a programming exercise that requires implementing the Bully Election Algorithm to elect a coordinator from multiple instances of a program. The program ## instances must communicate with each other using Interprocess Communication (IPC) mechanisms.
 
